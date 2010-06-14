@@ -1,4 +1,6 @@
 import os
+import sys
+import subprocess
 
 from yaku.task \
     import \
@@ -64,3 +66,27 @@ def apply_libdir(task_gen):
     libdir = list(implicit_paths) + libdir
     task_gen.env["APP_LIBDIR"] = [
             task_gen.env["LIBDIR_FMT"] % d for d in libdir]
+
+class CCompilerBuilder(object):
+    def __init__(self, ctx):
+        self.ctx =ctx
+
+    def detect_compiler(self, suggestions=None, env=None):
+        sys.stderr.write("Checking for C compiler ...")
+        if env is None:
+            path = os.environ["PATH"].split(os.pathsep)
+        else:
+            path = env["PATH"].split(os.pathsep)
+        for cc in ["gcc", "cc"]:
+            for d in path:
+                try:
+                    if os.path.exists(os.path.join(d, cc)):
+                        sys.stderr.write(" " + cc + "\n")
+                        self.ctx.env["CC_NAME"] = cc
+                        return True
+                except OSError:
+                    pass
+        return False
+
+def get_builder(ctx):
+    return CCompilerBuilder(ctx)
