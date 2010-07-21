@@ -1,3 +1,4 @@
+import sys
 import yaku.utils
 
 def setup(ctx):
@@ -11,10 +12,10 @@ def setup(ctx):
     ctx.env["LINKFLAGS"] = []
     ctx.env["LINK_TGT_F"] = ["-o"]
     ctx.env["LINK_SRC_F"] = []
-    ctx.env["SHLINK"] = ["clang", "-shared"]
-    ctx.env["SHLINKFLAGS"] = []
-    ctx.env["SHLINK_TGT_F"] = ["-o"]
-    ctx.env["SHLINK_SRC_F"] = []
+    if sys.platform == "darwin":
+        ctx.env["SHLINK"] = ["clang", "-bundle", "-undefined", "dynamic_lookup"]
+    else:
+        ctx.env["SHLINK"] = ["clang", "-shared"]
     ctx.env["CPPPATH"] = []
     ctx.env["CPPPATH_FMT"] = "-I%s"
     ctx.env["LIBDIR"] = []
