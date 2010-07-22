@@ -104,6 +104,7 @@ class CCBuilder(object):
     def __init__(self, ctx):
         self.ctx = ctx
         self.env = copy.deepcopy(ctx.env)
+        self.cc_type = "default"
 
     def ccompile(self, name, sources, env=None):
         _env = copy.deepcopy(self.env)
@@ -172,6 +173,9 @@ class CCBuilder(object):
         return outputs
 
 def configure(ctx):
+    cc_builder = ctx.builders["ctasks"]
+    cc_type = cc_builder.cc_type
+
     if sys.platform == "win32":
         candidates = ["msvc", "gcc"]
     else:
@@ -196,9 +200,24 @@ def configure(ctx):
         finally:
             sys.path.pop(0)
 
-    cc_type = _detect_cc()
+    if cc_type == "default":
+        cc_type = _detect_cc()
+    else:
+        sys.stderr.write("Looking for %s (forced)... " % cc_type)
+        sys.path.insert(0, os.path.dirname(yaku.tools.__file__))
+        try:
+            try:
+                mod = __import__(cc_type)
+                if mod.detect(ctx):
+                    sys.stderr.write("yes\n")
+            except ImportError:
+                raise ValueError("Compiler type %s unknown !" % cc_type)
+        finally:
+            sys.path.pop(0)
+
     if cc_type is None:
         raise ValueError("No C compiler found!")
+    cc_builder.cc_type = cc_type
     cc = ctx.load_tool(cc_type)
     cc.setup(ctx)
 
