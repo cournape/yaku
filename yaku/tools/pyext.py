@@ -81,18 +81,13 @@ def setup_pyext_env(ctx, cc_type="default", use_distutils=True):
         else:
             dist_env = get_configuration(cc_type)
     else:
-        dist_env = {
-                "CC": ["clang"],
-                "CPPPATH": [],
-                "BASE_CFLAGS": ["-fno-strict-aliasing"],
-                "OPT": [],
-                "SHARED": ["-fPIC"],
-                "SHLINK": ["clang", "-shared"],
-                "LDFLAGS": [],
-                "LIBDIR": [],
-                "LIBS": [],
-                "SO": ".so"}
+        dist_env = {}
+        vars = ["CC", "CPPPATH", "BASE_CFLAGS", "OPT", "SHARED", "SHLINK",
+                "LDFLAGS", "LIBDIR", "LIBS"]
+        for k in vars:
+            dist_env[k] = ctx.env.get(k, [])
         dist_env["CPPPATH"].append(distutils.sysconfig.get_python_inc())
+        dist_env["SO"] = distutils.sysconfig.get_config_var("SO")
 
     for name, value in dist_env.items():
         pyenv["PYEXT_%s" % name] = value
@@ -226,9 +221,10 @@ def configure(ctx):
     else:
         dist_env = setup_pyext_env(ctx, compiler_type, False)
         ctx.env.update(dist_env)
-        _setup_compiler(ctx, compiler_type)
 
-def _setup_compiler(ctx, cc_type):
+        _setup_compiler(ctx, compiler_type, use_distutils=False)
+
+def _setup_compiler(ctx, cc_type, use_distutils=True):
     old_env = ctx.env
     ctx.env = {}
     cc_env = None
@@ -250,6 +246,8 @@ def _setup_compiler(ctx, cc_type):
     copied_values = ["CPPPATH_FMT", "LIBDIR_FMT", "LIB_FMT",
             "CC_OBJECT_FMT", "CC_TGT_F", "CC_SRC_F", "LINK_TGT_F",
             "LINK_SRC_F"]
+    if not use_distutils:
+        copied_values.extend(["CC", "SHLINK"])
     for k in copied_values:
         ctx.env["PYEXT_%s" % k] = cc_env[k]
 
