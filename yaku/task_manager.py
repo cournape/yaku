@@ -1,6 +1,7 @@
 import os
 
 RULES_REGISTRY = {}
+FILES_REGISTRY = {}
 
 def extension(ext):
     def _f(f):
@@ -19,16 +20,30 @@ def get_extension_hook(ext):
     except KeyError:
         raise ValueError("No hook registered for extension %r" % ext)
 
+def set_file_hook(filename, hook):
+    old = FILES_REGISTRY.get(filename, None)
+    FILES_REGISTRY[filename] = hook
+    return old
+
+def get_file_hook(filename):
+    try:
+        return FILES_REGISTRY[filename]
+    except KeyError:
+        raise ValueError("No hook registered for filename %r" % filename)
+
 def create_tasks(ctx, sources):
     tasks = []
 
-    for s in sources:
+    def _get_hook(source):
+        if FILES_REGISTRY.has_key(source):
+            return FILES_REGISTRY[source]
         base, ext = os.path.splitext(s)
         if not RULES_REGISTRY.has_key(ext):
             raise RuntimeError("No rule defined for extension %r" % ext)
         else:
-            task_gen = RULES_REGISTRY[ext]
-            tasks.extend(task_gen(ctx, s))
+            return RULES_REGISTRY[ext]
+    for s in sources:
+        tasks.extend(_get_hook(s))
     return tasks
 
 def hash_task(t):

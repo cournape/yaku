@@ -7,7 +7,7 @@ from cPickle \
 
 from yaku._config \
     import \
-        BUILD_DIR, DEFAULT_ENV, BUILD_CONFIG, BUILD_CACHE, CONFIG_CACHE
+        BUILD_DIR, DEFAULT_ENV, BUILD_CONFIG, BUILD_CACHE, CONFIG_CACHE, HOOK_DUMP
 from yaku.environment \
     import \
         Environment
@@ -17,6 +17,7 @@ from yaku.tools \
 from yaku.utils \
     import \
         ensure_dir, rename
+import yaku.task_manager
 
 class ConfigureContext(object):
     def __init__(self):
@@ -73,6 +74,14 @@ class ConfigureContext(object):
         finally:
             fid.close()
 
+        fid = myopen(HOOK_DUMP, "wb")
+        try:
+            dump({"extensions": yaku.task_manager.RULES_REGISTRY,
+                  "files": yaku.task_manager.FILES_REGISTRY},
+                 fid)
+        finally:
+            fid.close()
+
 def load_tools(self, fid):
     tools = eval(fid.read())
     for t in tools:
@@ -110,6 +119,14 @@ class BuildContext(object):
                 fid.close()
         else:
             self.cache = {}
+
+        fid = open(HOOK_DUMP, "rb")
+        try:
+            data = load(fid)
+            yaku.task_manager.RULES_REGISTRY = data["extensions"]
+            yaku.task_manager.FILES_REGISTRY = data["files"]
+        finally:
+            fid.close()
 
     def store(self):
         # Use rename to avoid corrupting the cache if interrupted
