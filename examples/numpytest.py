@@ -19,25 +19,26 @@ def configure(conf):
 
     conf.log = open(log_filename, "w")
     try:
-        check_compiler(conf)
-        conf.env["CPPPATH"].append("/usr/include/python2.6")
-        if not check_header(conf, "Python.h"):
-            raise RuntimeError("Python header not found !")
-        check_header(conf, "math.h")
-        for mlibs in [[], ["m"]]:
-            if check_func(conf, "floor", libs=mlibs):
-                break
-        for tp in ("short", "int", "long"):
+        #check_compiler(conf)
+        #conf.env["CPPPATH"].append("/usr/include/python2.6")
+        #if not check_header(conf, "Python.h"):
+        #    raise RuntimeError("Python header not found !")
+        #check_header(conf, "math.h")
+        #for mlibs in [[], ["m"]]:
+        #    if check_func(conf, "floor", libs=mlibs):
+        #        break
+        #for tp in ("short", "int", "long"):
+        for tp in ("short",):
             check_type_size(conf, tp)
-        for tp in ("float", "double", "long double"):
-            check_type_size(conf, tp)
-        check_type(conf, "Py_intptr_t", headers=["Python.h"])
-        define(conf, "NPY_NO_SMP")
+        #for tp in ("float", "double", "long double"):
+        #    check_type_size(conf, tp)
+        #check_type(conf, "Py_intptr_t", headers=["Python.h"])
+        #define(conf, "NPY_NO_SMP")
 
-        mfuncs = ('expl', 'expf', 'log1p', 'expm1', 'asinh', 'atanhf',
-                'atanhl', 'rint', 'trunc')
-        check_funcs_at_once(conf, mfuncs)
-        generate_config_h(conf.conf_results, "build/conf/config.h")
+        #mfuncs = ('expl', 'expf', 'log1p', 'expm1', 'asinh', 'atanhf',
+        #        'atanhl', 'rint', 'trunc')
+        #check_funcs_at_once(conf, mfuncs)
+        #generate_config_h(conf.conf_results, "build/conf/config.h")
     finally:
         conf.log.close()
 

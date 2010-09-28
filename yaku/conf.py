@@ -34,7 +34,7 @@ from yaku.utils \
 
 from yaku.tools.ctasks \
     import \
-        shlink_task, apply_libs, apply_libdir, ccprogram_task
+        shlink_task, apply_libs, apply_libdir, ccprogram_task, ccompile_task
 
 class ConfigureContext(object):
     def __init__(self):
@@ -50,6 +50,16 @@ def create_file(conf, code, prefix="", suffix=""):
 
 def create_compile_conf_taskgen(conf, name, body, headers,
         extension=".c"):
+    old_root, new_root = create_conf_blddir(conf, name, body)
+    try:
+        conf.bld_root = new_root
+        return _create_compile_conf_taskgen(conf, name, body,
+                headers, extension)
+    finally:
+        conf.bld_root = old_root
+
+def _create_compile_conf_taskgen(conf, name, body, headers,
+        extension=".c"):
     if headers:
         head = "\n".join(["#include <%s>" % h for h in headers])
     else:
@@ -57,25 +67,32 @@ def create_compile_conf_taskgen(conf, name, body, headers,
     code = "\n".join([c for c in [head, body]])
     sources = [create_file(conf, code, name, extension)]
 
-    conf.tasks = [] # XXX: hack
-    builder = conf.builders["ctasks"]
-    builder.env = conf.env
-    builder.ccompile("yomama", sources)
-    # XXX: accessing tasks like this is ugly - the whole logging thing
-    # needs more thinking
-    for t in builder.ctx.tasks:
-        t.disable_output = True
+    task_gen = CompiledTaskGen("conf", conf, sources, name)
+    task_gen.env.update(copy.deepcopy(conf.env))
+    task_gen.env["INCPATH"] = ""
+
+    tasks = task_gen.process()
+
+    for t in tasks:
+        t.disable_output = False
         t.log = conf.log
 
     succeed = False
     explanation = None
     try:
-        run_tasks(conf, builder.ctx.tasks)
-        succeed = True
-    except TaskRunFailure, e:
-        explanation = str(e)
+        try:
+            run_tasks(conf, tasks)
+            succeed = True
+        except TaskRunFailure, e:
+            #for t in tasks:
+            #    tuid = t.get_uid()
+            #    conf.cache[tuid] = t.signature()
+            explanation = unicode(e).encode("utf-8")
+    finally:
+        #for t in tasks:
+        #    conf.conf_cacheprint "%r" % t.uid
 
-    write_log(conf.log, builder.ctx.tasks, code, succeed, explanation)
+    write_log(conf.log, tasks, code, succeed, explanation)
     return succeed
 
 def write_log(log, tasks, code, succeed, explanation):
@@ -156,7 +173,7 @@ def _create_binary_conf_taskgen(conf, name, body, builder, headers=None,
         run_tasks(conf, tasks)
         succeed = True
     except TaskRunFailure, e:
-        explanation = str(e)
+        explanation = unicode(e).encode("utf-8")
 
     write_log(conf.log, tasks, code, succeed, explanation)
     return succeed
@@ -247,7 +264,7 @@ def ccompile(conf, sources):
         run_tasks(conf, builder.ctx.tasks)
         succeed = True
     except TaskRunFailure, e:
-        explanation = str(e)
+        explanation = unicode(e).encode("utf-8")
 
     code = sources[0].read()
     write_log(conf.log, builder.ctx.tasks, code, succeed, explanation)
